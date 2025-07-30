@@ -1,0 +1,46 @@
+// Code your design here
+module uart_rx (
+    input clk,
+    input rst,
+    input rx,
+    output reg [7:0] data_out,
+    output reg rx_done,
+    output reg frame_error
+);
+    reg [3:0] bit_cnt;
+    reg [9:0] rx_shift;
+    reg [1:0] state;
+
+    parameter IDLE=0, START=1, READ=2, DONE=3;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            state <= IDLE;
+            bit_cnt <= 0;
+            rx_done <= 0;
+            frame_error <= 0;
+        end else begin
+            case (state)
+                IDLE: begin
+                    rx_done <= 0;
+                    if (~rx) state <= START;
+                end
+                START: begin
+                    state <= READ;
+                    bit_cnt <= 0;
+                end
+                READ: begin
+                    rx_shift[bit_cnt] <= rx;
+                    bit_cnt <= bit_cnt + 1;
+                    if (bit_cnt == 7) state <= DONE;
+                end
+                DONE: begin
+                    data_out <= rx_shift[7:0];
+                    rx_done <= 1;
+                    frame_error <= (rx != 1); // stop bit check
+                    state <= IDLE;
+                end
+            endcase
+        end
+    end
+endmodule
